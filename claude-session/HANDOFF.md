@@ -83,7 +83,7 @@ epilogue: { title: "結語", text: "", bigLast: true, sign: "" }
 - **照片頁排版**：`LAYOUTS` 定義每張照片的區塊與貼齊角落，`placeSnaps()` 依 `images/sizes.js` 的比例把整張照片縮放進區塊（不裁切）；版型會左右鏡像交替。視窗大小改變會重排。
 - **照片翻面**：`.snap.has-note` → `.snap-inner` 旋轉，背面 `.snap-back` 是橫線便條紙。
 - **日記頁**：`.diary .sheet` 的橫線用 `background-attachment: local` 跟著文字捲動，行高 34px 對齊橫線。
-- **結語**：翻到時 `epilogue.text` 依 `\n` 一行一行浮現，最後一行可放大，結束飄落愛心。
+- **結語**：翻到時 `epilogue.text` 依 `\n` 一行一行浮現，最後一行可放大（使用者要求：結尾**不要**有飄落 emoji 的特效）。
 - **iPhone 注意**：之前遇過信封開場在結尾同時「縮放＋淡出＋移除」時閃到左上角，所以避免在同一個元素上同時做這些。
 
 ## 常用指令

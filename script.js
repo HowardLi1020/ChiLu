@@ -307,7 +307,6 @@
       await wait(1000);
     }
     finCheck();
-    burst(40);
   };
 
   /* ── 翻頁 ── */
@@ -437,21 +436,6 @@
   }, true);
   // 點封面也能翻開
   cover.front.addEventListener('click', () => { startMusic(); if (cur === 0) turn(1); });
-
-  function burst(count) {
-    const items = ['💛', '✨', '🌼', '🧡', '💛'];
-    for (let i = 0; i < count; i++) {
-      const s = el('span', 'confetti', items[i % items.length]);
-      s.style.left = Math.random() * 100 + 'vw';
-      s.style.fontSize = 16 + Math.random() * 22 + 'px';
-      s.style.animationDuration = 3 + Math.random() * 3 + 's';
-      s.style.animationDelay = Math.random() * 1.4 + 's';
-      s.style.setProperty('--drift', (Math.random() * 200 - 100) + 'px');
-      s.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
-      s.addEventListener('animationend', () => s.remove());
-      document.body.append(s);
-    }
-  }
 
   /* ── 燈箱 ── */
   const lb = $('#lightbox');

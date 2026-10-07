@@ -590,7 +590,6 @@ button:focus-visible, .snap:focus-visible { outline: 3px solid var(--honey); out
 .lb-next { right: 16px; bottom: max(20px, env(safe-area-inset-bottom)); }
 
 /* ── 特效 ── */
-.confetti { position: fixed; top: -8vh; z-index: 45; pointer-events: none; animation: fall linear forwards; }
 .tap-heart {
   position: fixed;
   z-index: 45;
@@ -607,7 +606,6 @@ button:focus-visible, .snap:focus-visible { outline: 3px solid var(--honey); out
 @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes tipNudge { 0%, 70%, 100% { transform: rotate(8deg); } 78% { transform: rotate(-4deg) scale(1.08); } 86% { transform: rotate(10deg); } }
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes fall { to { transform: translate(var(--drift, 0), 118vh) rotate(var(--rot, 360deg)); } }
 @keyframes floatUp { from { opacity: 1; transform: translate(-50%, -50%) scale(.6); } to { opacity: 0; transform: translate(-50%, -160%) scale(1.3); } }
 
 @media (prefers-reduced-motion: reduce) {
