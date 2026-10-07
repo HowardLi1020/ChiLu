@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F3E3C0">
+  <title>給你</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 共用圖案：向日葵壓印 -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="gFoil" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#F7D987"/><stop offset=".45" stop-color="#E2AE48"/>
+        <stop offset=".7" stop-color="#F3CF78"/><stop offset="1" stop-color="#C98F2E"/>
+      </linearGradient>
+      <!-- 向日葵：花瓣由 script.js 產生 -->
+      <symbol id="sunflower" viewBox="0 0 64 64">
+        <g id="sunPetals" fill="currentColor"></g>
+        <circle cx="32" cy="32" r="8.5" fill="currentColor"/>
+        <g id="sunSeeds" fill="#000" opacity=".22"></g>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- 相簿：每一頁由 script.js 依 data.js 產生 -->
+  <main class="book-wrap">
+    <div class="book" id="book" aria-roledescription="相簿"></div>
+  </main>
+
+  <!-- 底部：音樂｜翻頁｜橡果 -->
+  <footer class="bar">
+    <div class="bar-side">
+      <button id="musicBtn" class="music" aria-label="播放音樂" hidden>♪</button>
+    </div>
+    <nav class="pager" aria-label="翻頁">
+      <button class="pg-btn" id="prevBtn" aria-label="上一頁">‹</button>
+      <span id="pageNum" aria-live="polite"></span>
+      <button class="pg-btn" id="nextBtn" aria-label="下一頁">›</button>
+    </nav>
+    <div class="bar-side right"></div>
+  </footer>
+
+  <!-- 音樂 -->
+  <audio id="bgm" loop preload="metadata"></audio>
+  <div id="ytWrap" aria-hidden="true"><div id="ytPlayer"></div></div>
+
+  <!-- 照片燈箱 -->
+  <div id="lightbox" hidden>
+    <button class="lb-btn lb-close" aria-label="關閉">×</button>
+    <button class="lb-btn lb-prev" aria-label="上一張">‹</button>
+    <figure>
+      <div class="lb-img"></div>
+      <figcaption></figcaption>
+    </figure>
+    <button class="lb-btn lb-next" aria-label="下一張">›</button>
+  </div>
+
+  <script src="images/sizes.js"></script>
+  <script src="data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

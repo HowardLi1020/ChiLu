@@ -1,0 +1,8 @@
+# 截圖工具的暫存輸出
+tools/_shots/
+__pycache__/
+
+# 系統檔
+Thumbs.db
+desktop.ini
+.DS_Store
