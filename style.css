@@ -194,6 +194,8 @@ button:focus-visible, .snap:focus-visible { outline: 3px solid var(--honey); out
 .pc-stamp-art.has-photo .photo { width: 100%; height: 100%; }
 .pc-stamp-art.has-photo .photo img { height: 100%; object-fit: cover; }
 .pc-stamp-value { position: absolute; left: 7%; top: 3%; font-family: Georgia, serif; font-size: 2.9cqw; font-weight: 700; color: #7A4B2A; }
+/* 郵票用照片時，面額墊一塊米白底才看得清楚 */
+.pc-stamp-art.has-photo .pc-stamp-value { left: 0; top: 0; padding: .3cqw 1.2cqw .4cqw; background: rgba(255, 253, 246, .88); line-height: 1.1; }
 
 /* 郵戳：深藍灰墨水、斑駁、壓在郵票邊上 */
 .pc-postmark {
@@ -209,21 +211,30 @@ button:focus-visible, .snap:focus-visible { outline: 3px solid var(--honey); out
 .pc-postmark svg { display: block; width: 100%; font-family: "Courier New", ui-monospace, monospace; }
 
 /* 貼在明信片上的小照片：白邊相紙＋紙膠帶，依原比例完整顯示 */
+.pc-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 3cqw;
+  padding-top: 4cqh;
+}
 .pc-photo {
-  position: absolute;
-  top: 25cqh; right: 7cqw;
+  position: relative;
   z-index: 2;
-  width: min(40cqw, calc(30cqh * var(--ratio, .75)));
-  margin: 0;
-  padding: 1.6cqw 1.6cqw 5cqw;
+  flex: none;
+  width: min(44cqw, calc(36cqh * var(--ratio, .75)));
+  margin: 0 -1cqw 0 0;
+  padding: 2.2cqw 2.2cqw 7cqw;   /* 拍立得白邊，和照片頁同比例 */
   background: #FFFFFC;
   transform: rotate(4deg);
   box-shadow: 0 6px 12px -6px rgba(60, 40, 20, .5), 0 1px 2px rgba(60, 40, 20, .25);
   cursor: pointer;
 }
 .pc-photo .tape { width: 16cqw; height: 4.2cqw; top: -2.2cqw; }
-.pc-message.beside-photo { padding-right: 46cqw; }
-.pc-message.beside-photo .pc-msg-title { font-size: 7.4cqw; }
+.pc-message.beside-photo { flex: 1; min-width: 0; margin-top: 0; }
+.pc-message.beside-photo .pc-msg-title { font-size: min(7.4cqw, calc(36cqw / var(--len, 5))); white-space: nowrap; }
+.pc-message.beside-photo .pc-msg-sub { font-size: min(4.6cqw, calc(36cqw / var(--len, 8))); white-space: pre; }
 
 /* 手寫：深藍黑原子筆 */
 .pc-hand { font-family: var(--font); color: #2E3A56; }
@@ -268,16 +279,35 @@ button:focus-visible, .snap:focus-visible { outline: 3px solid var(--honey); out
 .tape.side { top: 50%; left: auto; right: -30px; width: 70px; transform: rotate(-58deg); }
 
 .snap { position: relative; margin: 0; cursor: pointer; transform: rotate(var(--tilt, 0deg)); }
+/* 拍立得白邊：左右上等寬、下緣較厚（比例要和 script.js 的 POLAROID 一致） */
 .snap .frame {
   position: relative;
-  padding: 6px;
-  background: #fff;
+  padding: 5% 5% 16%;
+  background: #FFFFFC;
   border-radius: 2px;
   box-shadow: 0 7px 14px -8px rgba(80, 50, 20, .6), 0 1px 2px rgba(80, 50, 20, .2);
 }
+/* 有手寫小字的照片：下緣依字數加寬（--cap 由 script.js 的 capBottom 算出，佔框寬的比例） */
+.snap.has-cap .frame { padding-bottom: calc(var(--cap, .29) * 100%); container-type: inline-size; }
+.snap-cap {
+  position: absolute;
+  left: 6%; right: 6%; bottom: 1cqw;
+  height: calc((var(--cap, .29) - .06) * 100cqw);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-family: var(--font);
+  font-size: 6cqw;
+  line-height: 1.4;
+  text-align: center;
+  text-wrap: balance;   /* 兩行長度平均，不會只剩一兩個字掉到下一行 */
+  white-space: pre-line;   /* 也可以用 \n 自己決定在哪裡換行 */
+  color: #2E3A56;
+  overflow: hidden;
+}
 .snap .photo { aspect-ratio: auto; background: var(--cream-2); min-height: 60px; }
 .snap .photo img { height: auto; }
-.snap.corners .frame { padding: 0; background: none; box-shadow: 0 6px 12px -8px rgba(80, 50, 20, .55); }
 .snap.corners .frame::after {
   content: "";
   position: absolute;
@@ -330,6 +360,50 @@ button:focus-visible, .snap:focus-visible { outline: 3px solid var(--honey); out
 .diary-text.empty::before { content: "（在 data.js 寫下這一頁的日記）"; color: var(--ink-soft); opacity: .45; }
 .diary .pg-no { margin: 34px 0 0; }
 .preface .pg-head .stamp { color: var(--brown-2); }
+/* 日記文字底下貼的拍立得：依原比例完整顯示，高度不超過約半頁 */
+.diary-photo {
+  position: relative;
+  width: min(72%, calc(46vh * var(--ratio, .75)));
+  margin: 30px auto 0;
+  padding: 9px 9px 30px;
+  background: #FFFFFC;
+  border-radius: 2px;
+  box-shadow: 0 7px 14px -8px rgba(80, 50, 20, .6), 0 1px 2px rgba(80, 50, 20, .2);
+  transform: rotate(-2.5deg);
+  cursor: pointer;
+}
+/* 兩張以上並排：一左一右各歪一點、錯開高度、稍微疊在一起 */
+.diary-photos.multi { display: flex; justify-content: center; align-items: flex-start; margin-top: 30px; }
+.diary-photos.multi .diary-photo { width: min(50%, calc(34vh * var(--ratio, .75))); margin: 0; }
+.diary-photos.multi .diary-photo:nth-child(odd) { z-index: 1; }   /* 左邊那張壓在上面，下緣的字才不會被蓋住 */
+.diary-photos.multi .diary-photo:nth-child(even) { margin: 28px 0 0 -5%; transform: rotate(3deg); }
+/* 並排的照片比較窄：下緣加寬，小字可以寫兩行 */
+.diary-photos.multi .diary-photo:has(.diary-photo-cap) { padding-bottom: 44px; }
+.diary-photos.multi .diary-photo-cap { height: 44px; display: flex; align-items: center; justify-content: center; font-size: .78rem; line-height: 1.35; white-space: normal; text-wrap: balance; }
+/* 三張以上：小拍立得拼貼，一排四張、各歪一點、互相稍微疊著 */
+.diary-photos.many { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 4px 0; margin-top: 18px; padding: 0 2%; }
+.diary-photos.many + .pg-no { margin-top: 14px; }
+.diary-photos.many .diary-photo { width: 26%; margin: 0 -1%; padding: 5px 5px 16px; transform: rotate(var(--t, 0deg)); }
+.diary-photos.many .diary-photo:nth-child(4n+1) { --t: -4deg; }
+.diary-photos.many .diary-photo:nth-child(4n+2) { --t: 3deg; margin-top: 10px; }
+.diary-photos.many .diary-photo:nth-child(4n+3) { --t: -2deg; }
+.diary-photos.many .diary-photo:nth-child(4n+4) { --t: 4deg; margin-top: 8px; }
+.diary-photos.many .tape { width: 40px; height: 12px; top: -6px; }
+.diary-photos.many.rows3 .diary-photo { width: 33%; }
+/* 拍立得下緣的手寫小字 */
+.diary-photo-cap {
+  position: absolute;
+  left: 9px; right: 9px; bottom: 0;
+  height: 30px;
+  font-family: var(--font);
+  font-size: .82rem;
+  line-height: 30px;
+  text-align: center;
+  color: #2E3A56;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .more-hint {
   position: absolute;
   left: 0; right: 0; bottom: 0;
@@ -370,13 +444,26 @@ button:focus-visible, .snap:focus-visible { outline: 3px solid var(--honey); out
 .photos .pg-no { position: absolute; left: 0; right: 0; bottom: 1.5cqh; margin: 0; }
 .card-tag {
   position: absolute;
-  z-index: 2;
+  z-index: 12;   /* 比有小字、疊在上層的照片（z-index 最高 10）還上面 */
   font-size: 1.05rem;
   color: var(--brown-2);
   white-space: nowrap;
   transform: rotate(-5deg);
 }
 .card-tag::after { content: ""; display: block; height: 2px; margin-top: -2px; border-radius: 2px; background: rgba(248, 220, 126, .9); }
+/* 照片頁空白處的手寫字（位置由 script.js 的 placeNotes 決定） */
+.page-note {
+  position: absolute;
+  z-index: 12;
+  margin: 0;
+  font-family: var(--font);
+  font-size: 7.5cqw;
+  line-height: 1.35;
+  color: #2E3A56;
+  white-space: pre;
+  transform: rotate(-4deg);
+  pointer-events: none;
+}
 .pg-no { text-align: center; }
 .pg-no .stamp { font-size: .72rem; transform: rotate(3deg); }
 

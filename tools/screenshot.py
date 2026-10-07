@@ -4,6 +4,8 @@
 用法：
   python tools/screenshot.py 1 2 3        翻到第 1、2、3 頁各截一張
   python tools/screenshot.py 3f           翻到第 3 頁，並把那頁第一張「有寫字」的照片翻面
+  python tools/screenshot.py 1b           翻到第 1 頁，並捲到那頁最底下
+  python tools/screenshot.py 3z           翻到第 3 頁，並點開那頁第一張照片（燈箱）
   python tools/screenshot.py --demo 1 2   先塞示範文字再截圖（只在測試頁，不改 data.js）
 
 輸出：tools/_shots/page_<參數>.png，以及全部並排的 tools/_shots/all.png
@@ -52,9 +54,13 @@ def main():
     shots = []
     for a in pages:
         flip = a.endswith("f")
-        k = int(a.rstrip("f"))
+        bottom = a.endswith("b")
+        zoom = a.endswith("z")
+        k = int(a.rstrip("fbz"))
         js = (f"for(let i=0;i<{k};i++) setTimeout(()=>document.dispatchEvent(new KeyboardEvent('keydown',{{key:'ArrowRight'}})),300+i*1150);"
-              + (f"setTimeout(()=>document.querySelectorAll('.page')[{k}].querySelector('.snap.has-note')?.click(),{600 + k * 1150});" if flip else ""))
+              + (f"setTimeout(()=>document.querySelectorAll('.page')[{k}].querySelector('.snap.has-note')?.click(),{600 + k * 1150});" if flip else "")
+              + (f"setTimeout(()=>{{const s=document.querySelectorAll('.page')[{k}].querySelector('.sheet');s.scrollTop=s.scrollHeight;s.dispatchEvent(new Event('scroll'));}},{600 + k * 1150});" if bottom else "")
+              + (f"setTimeout(()=>document.querySelectorAll('.page')[{k}].querySelector('.snap')?.click(),{600 + k * 1150});" if zoom else ""))
         page = html.replace("<head>", f"<head><base href='{ROOT.as_uri()}/'>", 1)
         if demo:
             page = page.replace('<script src="script.js"></script>', DEMO + '<script src="script.js"></script>', 1)

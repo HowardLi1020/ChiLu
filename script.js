@@ -110,7 +110,7 @@
 
   // 印刷的抬頭
   const pcHead = el('div', 'pc-head');
-  pcHead.append(el('span', 'pc-title', 'POST CARD'), el('span', 'pc-title-zh', '明信片'));
+  pcHead.append(el('span', 'pc-title', 'FOR YOU'), el('span', 'pc-title-zh', '寫給你的日記'));
 
   // 郵票：有填 coverPhoto 就用那張照片當郵票圖案，沒填就是向日葵
   const pcStamp = el('div', 'pc-stamp');
@@ -145,7 +145,11 @@
   const title = el('h1', 'pc-hand pc-msg-title');
   const [t1, t2] = (D.heroTitle || '').split('，');
   if (t2 != null) title.append(t1 + '，', document.createElement('br'), t2); else title.textContent = t1;
-  pcMsg.append(title, el('p', 'pc-hand pc-msg-sub', D.heroSub));
+  // 依最長那行的字數縮小字級，一行才不會被拆開
+  title.style.setProperty('--len', Math.max(1, (t1 + '，').length, (t2 || '').length));
+  const sub = el('p', 'pc-hand pc-msg-sub', D.heroSub);
+  sub.style.setProperty('--len', Math.max(1, ...(D.heroSub || '').split('\n').map(s => s.length)));
+  pcMsg.append(title, sub);
 
   // 收件人
   const pcAddr = el('div', 'pc-address');
@@ -153,29 +157,48 @@
   toLine.append(el('span', 'pc-label', 'TO'), el('span', 'pc-hand pc-to', (D.to || '').replace(/^給\s*/, '')));
   pcAddr.append(toLine, el('div', 'pc-line'), el('div', 'pc-line'));
 
-  // 貼在明信片上的小照片（完整顯示、不裁切）
+  // 貼在明信片上的小照片（完整顯示、不裁切），和留言並排、上下置中
+  let pcBody = pcMsg;
   if (D.postcardPhoto) {
     const pic = el('figure', 'pc-photo');
     pic.style.setProperty('--ratio', ratioOf(D.postcardPhoto));
     pic.append(photoEl(D.postcardPhoto, '', 'm'), tape(1, -8));
     pic.addEventListener('click', e => { e.stopPropagation(); openPhoto(D.postcardPhoto); });
-    pc.append(pic);
     pcMsg.classList.add('beside-photo');
+    pcBody = el('div', 'pc-body');
+    pcBody.append(pcMsg, pic);
   }
-  pc.append(pcHead, pcStamp, pcMark, pcMsg, el('div', 'pc-divider'), pcAddr, el('p', 'pc-foot', `HANDMADE DIARY · ${firstDate.slice(0, 4)}`));
+  pc.append(pcHead, pcStamp, pcMark, pcBody, el('div', 'pc-divider'), pcAddr, el('p', 'pc-foot', `HANDMADE DIARY · ${firstDate.slice(0, 4)}`));
   const coverHint = el('p', 'cover-hint', '往左滑翻開 ');
   coverHint.append(el('span', '', '←'));
   cover.front.prepend(pc, coverHint);
 
   /* ── 日記頁：橫線筆記本，寫不下時可以往下捲 ── */
-  function diaryPage({ tag, title, text, doodleName, cls = '' }) {
+  function diaryPage({ tag, title, text, doodleName, cls = '', photo = '', caption = '' }) {
     const p = makePage('diary ' + cls);
     const s = p.sheet;
     const head = el('div', 'pg-head');
     head.append(tag ? stamp(tag) : el('span'), doodle(doodleName));
     const body = el('div', 'diary-text', text || '');
     if (!text) body.classList.add('empty');
-    s.append(head, highlight('h2', 'diary-title', title), body, pageNo());
+    s.append(head, highlight('h2', 'diary-title', title), body);
+    // 文字底下貼拍立得（完整顯示、不裁切），點一下放大；photo / caption 可以是一張或一組（並排貼）
+    const pics = [].concat(photo || []);
+    const caps = [].concat(caption || []);
+    if (pics.length) {
+      // 2 張並排；3 張以上拼貼（5、6 張一排 3 張，其他一排 4 張）
+      const row = el('div', 'diary-photos' + (pics.length > 2 ? ' many' + ([5, 6].includes(pics.length) ? ' rows3' : '') : pics.length > 1 ? ' multi' : ''));
+      pics.forEach((src, j) => {
+        const pic = el('figure', 'diary-photo');
+        pic.style.setProperty('--ratio', ratioOf(src));
+        pic.append(photoEl(src, caps[j] || '', 'm'), tape(j % 2 ? 4 : 2, j % 2 ? 5 : -4));
+        if (caps[j]) pic.append(el('figcaption', 'diary-photo-cap', caps[j]));
+        pic.addEventListener('click', e => { e.stopPropagation(); openPhoto(src); });
+        row.append(pic);
+      });
+      s.append(row);
+    }
+    s.append(pageNo());
     // 內容超過一頁時，在底部提示可以往下捲
     const more = el('span', 'more-hint', '往下還有 ↓');
     p.front.append(more);
@@ -187,7 +210,7 @@
   }
 
   // 前言
-  diaryPage({ tag: D.to || '', title: D.preface?.title || '前言', text: D.preface?.text, doodleName: 'sparkle', cls: 'preface' });
+  diaryPage({ tag: D.to || '', title: D.preface?.title || '前言', text: D.preface?.text, doodleName: 'sparkle', cls: 'preface', photo: D.preface?.photo, caption: D.preface?.caption });
 
   /* ── 照片頁：每 2～3 張貼成一頁 ── */
   const PAPERS = ['paper-cream', 'paper-butter', 'paper-kraft'];
@@ -210,20 +233,88 @@
   const CARD_DOODLES = ['star', 'heart', 'sparkle', 'arrow', 'sun'];
   let cardNo = 0;
 
+  // 拍立得白邊佔照片框寬度的比例（和 style.css 的 .snap .frame padding 一致）
+  // 有 caption 的照片下緣加寬：依字數估行數（一行約 14 字，\n 可自己分行），兩行約 .29、三行約 .375
+  const POLAROID = { side: .05, bottom: .16 };
+  const capLines = text => text.split('\n').reduce((n, s) => n + Math.max(1, Math.ceil(s.length / 14)), 0);
+  const capBottom = text => .12 + .085 * Math.max(2, capLines(text));
   const placed = [];
   function placeSnaps() {
     const W = book.clientWidth, H = book.clientHeight;
     if (!W || !H) return;
-    placed.forEach(({ f, region: [x, y, w, h], anchor: [ax, ay], ratio, mirror, pad }) => {
+    // 框高 = 框寬 × hPerW（照片本身＋上下白邊）
+    const inner = 1 - 2 * POLAROID.side;
+    const layout = (item, scale) => {
+      let { region: [x, y, w, h], anchor: [ax, ay], ratio, mirror, bottom } = item;
       if (mirror) { x = 1 - x - w; ax = 1 - ax; }
       const rw = w * W, rh = h * H;
-      const pw = Math.min(rw, (rh - pad) * ratio + pad);
-      const ph = (pw - pad) / ratio + pad;
-      Object.assign(f.style, {
-        left: (x * W + (rw - pw) * ax) / W * 100 + '%',
-        top: (y * H + (rh - ph) * ay) / H * 100 + '%',
-        width: pw / W * 100 + '%'
+      const hPerW = inner / ratio + POLAROID.side + bottom;
+      const pw = Math.min(rw, rh / hPerW) * scale;
+      const ph = pw * hPerW;
+      const left = x * W + (rw - pw) * ax, top = y * H + (rh - ph) * ay;
+      return { l: left, t: top, r: left + pw, b: top + ph };
+    };
+    const hit = (a, b, m = 6) => a.l < b.r + m && b.l < a.r + m && a.t < b.b + m && b.t < a.b + m;
+    // 同一頁一起排：有 whole（不要被蓋住）的照片，整頁照片一起縮小到彼此不重疊為止
+    new Set(placed.map(p => p.page)).forEach(page => {
+      const items = placed.filter(p => p.page === page);
+      let scale = 1, rects;
+      for (;;) {
+        rects = items.map(it => layout(it, scale));
+        const clash = items.some((it, a) => it.whole && rects.some((r, b) => a !== b && hit(rects[a], r)));
+        if (!clash || scale <= .7) break;
+        scale -= .02;
+      }
+      items.forEach(({ f }, j) => {
+        const r = rects[j];
+        Object.assign(f.style, { left: r.l / W * 100 + '%', top: r.t / H * 100 + '%', width: (r.r - r.l) / W * 100 + '%' });
+        f.rect = r;
       });
+    });
+    placeNotes(W, H);
+  }
+
+  // 照片頁的手寫字：在照片、塗鴉、日期標籤之外，找離它們最遠的空白處
+  const pageNotes = [];
+  function placeNotes(W, H) {
+    const gap = (a, b) => {
+      const dx = Math.max(0, a.l - b.r, b.l - a.r), dy = Math.max(0, a.t - b.b, b.t - a.b);
+      return dx || dy ? Math.hypot(dx, dy) : -1;   // -1：重疊
+    };
+    pageNotes.forEach(({ el: n, sheet, avoid, text }) => {
+      const blocks = [
+        // 照片（上方多留紙膠帶的高度）
+        ...[...sheet.querySelectorAll('.snap')].filter(s => s.rect).map(({ rect: r }) => ({ l: r.l - 8, t: r.t - 18, r: r.r + 8, b: r.b + 8 })),
+        ...avoid.map(([l, t, aw, ah]) => ({ l: l * W, t: t * H, r: (l + aw) * W, b: t * H + ah * W })),
+        { l: 0, t: H * .9, r: W, b: H }   // 頁碼
+      ];
+      // 先試一行寫完；一行放不下（或擠在照片邊上）再試分成兩行
+      // 文字裡有 \n 就照它分行；沒有的話從中間切
+      const oneLine = text.replace(/\n/g, '');
+      const half = Math.ceil(oneLine.length / 2);
+      const twoLines = text.includes('\n') ? text : oneLine.length > 4 ? oneLine.slice(0, half) + '\n' + oneLine.slice(half) : null;
+      const tries = [oneLine, twoLines].filter(Boolean);
+      let best = null, bestGap = -1, bestText = text, bestSize = 0;
+      // 字級從大到小試（頁寬的比例），大字放得下就用大字
+      for (const size of [.075, .066, .058, .05]) {
+        const fs = W * size;
+        tries.forEach((t, li) => {
+          const lines = t.split('\n');
+          const w = Math.max(...lines.map(s => s.length)) * fs + 8, h = fs * 1.35 * lines.length;
+          for (let y = H * .03; y + h <= H * .9; y += H * .015) {
+            for (let x = W * .05; x + w <= W * .95; x += W * .02) {
+              const box = { l: x, t: y, r: x + w, b: y + h };
+              // 分兩行的版本要明顯比較寬敞才換過去
+              const g = Math.min(...blocks.map(b => gap(box, b))) - (li && bestGap >= 12 ? 1e9 : 0);
+              if (g > bestGap) { bestGap = g; best = box; bestText = t; bestSize = size; }
+            }
+          }
+        });
+        if (bestGap >= 6) break;
+      }
+      n.hidden = !best;
+      n.textContent = bestText;
+      if (best) Object.assign(n.style, { left: best.l / W * 100 + '%', top: best.t / H * 100 + '%', fontSize: bestSize * 100 + 'cqw' });
     });
   }
   let resizeTimer;
@@ -235,12 +326,17 @@
   // 一張貼上去的照片；有寫 note 的可以翻到背面看，沒寫的點一下放大
   function snap(photo, idx, n) {
     const hasNote = Boolean(photo.note);
-    const f = el('figure', 'snap' + (n % 3 === 2 ? ' corners' : '') + (hasNote ? ' has-note' : ''));
+    const f = el('figure', 'snap' + (n % 3 === 2 ? ' corners' : '') + (hasNote ? ' has-note' : '') + (photo.caption ? ' has-cap' : ''));
     f.setAttribute('role', 'button');
     f.tabIndex = 0;
     const inner = el('div', 'snap-inner');
     const frame = el('div', 'frame');
-    frame.append(photoEl(photo.src, '', 'm'));
+    frame.append(photoEl(photo.src, photo.caption || '', 'm'));
+    // 寫在拍立得下緣的手寫小字
+    if (photo.caption) {
+      frame.append(el('figcaption', 'snap-cap', photo.caption));
+      f.style.setProperty('--cap', capBottom(photo.caption));
+    }
     inner.append(frame);
     if (hasNote) {
       const back = el('div', 'snap-back');
@@ -266,9 +362,9 @@
   D.trips.forEach((t, i) => {
     const photos = t.photos.map(p => (typeof p === 'string' ? { src: p, note: '' } : p));
     const start = gallery.length;
-    photos.forEach(p => gallery.push({ src: p.src, caption: t.title || t.date }));
+    photos.forEach(p => gallery.push({ src: p.src, caption: t.date }));
 
-    diaryPage({ tag: t.date, title: t.title, text: t.diary, doodleName: ['heart', 'star', 'sparkle'][i % 3] });
+    diaryPage({ tag: t.date, title: t.title, text: t.diary, doodleName: ['heart', 'star', 'sparkle'][i % 3], photo: t.diaryPhoto, caption: t.diaryCaption });
 
     let k = 0;
     splitPhotos(photos.length).forEach((size, g) => {
@@ -278,7 +374,9 @@
       slots.forEach((region, j) => {
         const f = snap(photos[k], start + k, k + i);
         f.style.setProperty('--tilt', (mirror ? -rot[j] : rot[j]) + 'deg');
-        placed.push({ f, region, anchor: anchor[j], ratio: ratioOf(photos[k].src), mirror, pad: f.classList.contains('corners') ? 0 : 12 });
+        // 有小字的照片疊在上面；同一頁好幾張都有字時，前面的壓在後面的上面（下緣的字才不會被蓋住）
+        if (photos[k].caption) f.style.zIndex = 10 - j;
+        placed.push({ f, page: c, region, anchor: anchor[j], ratio: ratioOf(photos[k].src), mirror, whole: Boolean(photos[k].whole), bottom: photos[k].caption ? capBottom(photos[k].caption) : POLAROID.bottom });
         c.sheet.append(f);
         k++;
       });
@@ -287,8 +385,19 @@
       Object.assign(d.style, { left: (mirror ? 100 - dx - 9 : dx) + '%', top: dy + '%' });
       const [nx, ny] = free[1];
       const tag = el('span', 'card-tag', `${t.dot || ''} ${'①②③④⑤⑥⑦'[g] || ''}`);
-      Object.assign(tag.style, { left: (mirror ? 100 - nx - 20 : nx) + '%', top: ny + '%' });
+      // 在頁面右半邊的標籤改從右邊對齊，日期區間比較長也不會超出頁面
+      const tx = mirror ? 100 - nx - 20 : nx;
+      Object.assign(tag.style, tx > 50 ? { right: (80 - tx) + '%', top: ny + '%' } : { left: tx + '%', top: ny + '%' });
       c.sheet.append(d, tag, pageNo());
+      // 這一頁的手寫字（pageNotes 依照片頁順序），位置由 placeNotes 找空白處
+      const noteText = t.pageNotes?.[g];
+      if (noteText) {
+        const n = el('p', 'page-note', noteText);
+        c.sheet.append(n);
+        const dl = mirror ? 100 - dx - 9 : dx, tl = tx > 50 ? tx - 12 : tx;
+        // 要避開的塗鴉與日期標籤 [left, top, 寬, 高]（left/寬是頁寬比例、top 是頁高比例、高是頁寬比例）
+        pageNotes.push({ el: n, sheet: c.sheet, text: noteText, avoid: [[dl / 100, dy / 100, .12, .12], [tl / 100, ny / 100, .34, .1]] });
+      }
     });
   });
 
@@ -481,7 +590,7 @@
     box.textContent = '';
     box.append(photoEl(item.src, item.caption));
     hydrate(box);
-    $('figcaption', lb).textContent = `${item.caption}　${lbIndex + 1} / ${gallery.length}`;
+    $('figcaption', lb).textContent = item.caption;
   }
   // 打開一張不在相簿照片清單裡的照片（例如明信片上的小照片）
   function openPhoto(src) {
