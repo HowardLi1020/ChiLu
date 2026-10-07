@@ -22,7 +22,7 @@
 - **照片一律完整顯示、不裁切**；只有為了黏貼感被其他照片疊住是可以接受的。
 - **照片背面可以寫一段話**：有寫的照片會出現「翻過來看 ↻」提示，點了翻面。
 - **撿橡果小遊戲已拿掉**；「關於你」那頁保留。
-- 封面不用照片時，是燙金向日葵（`coverPhoto` 留空）。
+- **封面是一張明信片（寫字的那一面）**：POST CARD 印刷抬頭、齒孔郵票（向日葵；`coverPhoto` 有填就用那張照片當郵票圖案）、圓形郵戳、深藍黑手寫字（`heroTitle`、`heroSub`、`to`），右側貼一張小照片（`postcardPhoto`，目前是 `images/IMG_7067.jpg` 兩人並肩走在街上的背影）。使用者覺得用 CSS 畫相簿等立體物品看起來假又廉價，**平面的紙類物品（明信片、便條、信紙）比較真實**，之後設計請朝這個方向。
 - 背景音樂用 YouTube：`JqR0_IFpdcg`（嵌入播放，不下載；本機雙擊打開時通常不會有聲音，放上網路後才會播）。
 - 使用者的全域規則：**未經同意不得啟動任何伺服器或佔用 port**。要看畫面時用下面的「無伺服器截圖」方法。
 
@@ -61,7 +61,7 @@ claude-session/       這份交接文件與對話紀錄
 ## data.js 結構
 
 ```js
-to, heroTitle, heroSub, coverPhoto   // 封面
+to, heroTitle, heroSub, postcardPhoto, coverPhoto   // 封面（明信片）
 music: { youtube, start, volume }
 preface:  { title: "前言", text: "" }
 trips: [{
@@ -89,12 +89,15 @@ epilogue: { title: "結語", text: "", bigLast: true, sign: "" }
 ## 常用指令
 
 ```bash
-# 新增／替換照片後（放進 photos/ 再執行；只會處理有變動的照片）
+# 新增／替換照片後（放進 photos/ 或它的子資料夾再執行；只會處理有變動的照片）
 python tools/compress_photos.py
 
 # 手機寬度截圖（不開伺服器），例如看第 1、2、3 頁，以及第 3 頁把有字的照片翻面
 python tools/screenshot.py 1 2 3 3f
 python tools/screenshot.py --demo 1 2 3f    # 塞示範文字（只在測試頁，不改 data.js）
+
+# 更新對話紀錄：在 Claude Code 匯出對話（session 選單的 Export）後
+python tools/transcript_to_md.py <匯出的 zip>
 ```
 
 截圖存在 `tools/_shots/`（不進 git）。需要電腦上有 Chrome 或 Edge。

@@ -14,6 +14,7 @@ window.MEMORY = {
   to: "",            // 封面上的字，例如「給 ○○」
   heroTitle: "",     // 封面標題；用全形逗號「，」分隔時會換行
   heroSub: "",       // 封面標題下方的小字
+  postcardPhoto: "images/IMG_7067.jpg",   // 明信片上貼的小照片（完整顯示）；留空就不貼
   coverPhoto: "",   // 封面要貼的照片，例如 "images/2026.09.19-21/IMG_5536.jpg"；留空就用燙金向日葵
 
   // 背景音樂：填 YouTube 影片 ID（網址 watch?v= 後面那串）；留空 "" 改用 music/song.mp3

@@ -101,36 +101,71 @@
     return f;
   };
 
-  // 封面
+  // 封面：一張明信片（寫字的那一面）
   const cover = makePage('cover');
   cover.sheet.remove();
-  const firstDate = D.trips[0]?.date.slice(0, 7) || '';
-  const lastDate = D.trips[D.trips.length - 1]?.date.slice(0, 7) || '';
-  const coverBody = el('div', 'cover-body');
-  // 封面圖：data.js 有填 coverPhoto 就貼那張照片，沒填就用燙金向日葵
-  let win;
+  const firstDate = D.trips[0]?.date || '';
+  const lastDate = D.trips[D.trips.length - 1]?.date || '';
+  const pc = el('div', 'postcard');
+
+  // 印刷的抬頭
+  const pcHead = el('div', 'pc-head');
+  pcHead.append(el('span', 'pc-title', 'POST CARD'), el('span', 'pc-title-zh', '明信片'));
+
+  // 郵票：有填 coverPhoto 就用那張照片當郵票圖案，沒填就是向日葵
+  const pcStamp = el('div', 'pc-stamp');
+  const art = el('div', 'pc-stamp-art');
   if (D.coverPhoto) {
-    win = el('div', 'cover-window');
-    win.append(tape(1, -6), photoEl(D.coverPhoto, '', 'm'));
+    art.classList.add('has-photo');
+    art.append(photoEl(D.coverPhoto, '', 's'));
   } else {
-    win = el('div', 'cover-art');
-    win.innerHTML = '<svg viewBox="0 0 64 64" aria-hidden="true"><use href="#sunflower"/></svg>';
+    art.innerHTML = '<svg viewBox="0 0 64 64" aria-hidden="true"><use href="#sunflower"/></svg>';
   }
-  const label = el('div', 'cover-label');
-  const title = el('h1', 'cover-title');
+  art.append(el('span', 'pc-stamp-value', firstDate.slice(0, 4)));
+  pcStamp.append(art);
+
+  // 郵戳：圓形日期戳＋波浪註銷線
+  const wave = y => `<path d="M112 ${y} q10.5 -7 21 0 t21 0 t21 0 t21 0 t21 0 t21 0"/>`;
+  const pcMark = el('div', 'pc-postmark');
+  pcMark.innerHTML = `<svg viewBox="0 0 240 120" aria-hidden="true">
+    <defs><path id="pmArc" d="M20.5 60 A39.5 39.5 0 0 1 99.5 60"/></defs>
+    <g fill="none" stroke="currentColor" stroke-width="2.4">
+      <circle cx="60" cy="60" r="47"/><circle cx="60" cy="60" r="32" stroke-width="1.2"/>
+      ${[38, 53, 68, 83].map(wave).join('')}
+    </g>
+    <g fill="currentColor">
+      <text font-size="9.5" letter-spacing="2.4"><textPath href="#pmArc" startOffset="50%" text-anchor="middle">DIARY · POST</textPath></text>
+      <text x="60" y="61" text-anchor="middle" font-size="15" font-weight="700">${firstDate.slice(0, 4)}</text>
+      <text x="60" y="78" text-anchor="middle" font-size="10.5" letter-spacing="1">${firstDate.slice(5, 7)} — ${lastDate.slice(5, 7)}</text>
+    </g>
+  </svg>`;
+
+  // 手寫的留言
+  const pcMsg = el('div', 'pc-message');
+  const title = el('h1', 'pc-hand pc-msg-title');
   const [t1, t2] = (D.heroTitle || '').split('，');
   if (t2 != null) title.append(t1 + '，', document.createElement('br'), t2); else title.textContent = t1;
-  label.append(el('p', 'cover-to', D.to), title,
-    el('p', 'cover-range', `${firstDate.replace('.', ' · ')}  —  ${lastDate.replace('.', ' · ')}`), el('p', 'cover-sub', D.heroSub));
-  if (D.coverPhoto) {
-    const sticker = el('span', 'cover-sticker');
-    sticker.innerHTML = '<svg viewBox="0 0 64 64" aria-hidden="true"><use href="#sunflower"/></svg>';
-    label.append(sticker);
+  pcMsg.append(title, el('p', 'pc-hand pc-msg-sub', D.heroSub));
+
+  // 收件人
+  const pcAddr = el('div', 'pc-address');
+  const toLine = el('div', 'pc-line');
+  toLine.append(el('span', 'pc-label', 'TO'), el('span', 'pc-hand pc-to', (D.to || '').replace(/^給\s*/, '')));
+  pcAddr.append(toLine, el('div', 'pc-line'), el('div', 'pc-line'));
+
+  // 貼在明信片上的小照片（完整顯示、不裁切）
+  if (D.postcardPhoto) {
+    const pic = el('figure', 'pc-photo');
+    pic.style.setProperty('--ratio', ratioOf(D.postcardPhoto));
+    pic.append(photoEl(D.postcardPhoto, '', 'm'), tape(1, -8));
+    pic.addEventListener('click', e => { e.stopPropagation(); openPhoto(D.postcardPhoto); });
+    pc.append(pic);
+    pcMsg.classList.add('beside-photo');
   }
-  coverBody.append(win, label);
+  pc.append(pcHead, pcStamp, pcMark, pcMsg, el('div', 'pc-divider'), pcAddr, el('p', 'pc-foot', `HANDMADE DIARY · ${firstDate.slice(0, 4)}`));
   const coverHint = el('p', 'cover-hint', '往左滑翻開 ');
   coverHint.append(el('span', '', '←'));
-  cover.front.prepend(el('div', 'cover-spine'), el('div', 'cover-corner tr'), el('div', 'cover-corner br'), coverBody, coverHint);
+  cover.front.prepend(pc, coverHint);
 
   /* ── 日記頁：橫線筆記本，寫不下時可以往下捲 ── */
   function diaryPage({ tag, title, text, doodleName, cls = '' }) {
@@ -447,6 +482,12 @@
     box.append(photoEl(item.src, item.caption));
     hydrate(box);
     $('figcaption', lb).textContent = `${item.caption}　${lbIndex + 1} / ${gallery.length}`;
+  }
+  // 打開一張不在相簿照片清單裡的照片（例如明信片上的小照片）
+  function openPhoto(src) {
+    gallery.push({ src, caption: '' });
+    openLB(gallery.length - 1);
+    gallery.pop();
   }
   function openLB(i) {
     lbIndex = i;

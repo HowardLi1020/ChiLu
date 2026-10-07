@@ -17,40 +17,48 @@ EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 SIZES = [("", 1600, 82), ("m", 1000, 80), ("s", 480, 78)]
 
 
+def sources():
+    """photos/ 根目錄與各子資料夾裡的照片"""
+    for f in sorted(SRC.rglob("*")):
+        if f.is_file() and f.suffix.lower() in EXTS:
+            yield f
+
+
+def full_size(out):
+    """images/ 裡的大圖（排除 m/、s/ 兩種縮小版）"""
+    return out.parent.name not in ("s", "m")
+
+
 def main():
     total_in = total_out = 0
-    for folder in sorted(p for p in SRC.iterdir() if p.is_dir()):
-        for f in sorted(folder.iterdir()):
-            if f.suffix.lower() not in EXTS:
-                continue
-            outs = [DST / folder.name / sub / (f.stem + ".jpg") for sub, _, _ in SIZES]
-            total_in += f.stat().st_size
-            # 已經壓過、原圖也沒換過的就跳過
-            if all(o.exists() and o.stat().st_mtime >= f.stat().st_mtime for o in outs):
-                total_out += outs[0].stat().st_size
-                continue
-            with Image.open(f) as im:
-                im = ImageOps.exif_transpose(im).convert("RGB")
-                for sub, edge, quality in SIZES:
-                    out_dir = DST / folder.name / sub
-                    out_dir.mkdir(parents=True, exist_ok=True)
-                    out = out_dir / (f.stem + ".jpg")
-                    copy = im.copy()
-                    copy.thumbnail((edge, edge), Image.LANCZOS)
-                    copy.save(out, "JPEG", quality=quality, optimize=True, progressive=True)
-                    if not sub:
-                        total_out += out.stat().st_size
-            print(f"{folder.name}/{f.name}")
+    for f in sources():
+        rel = f.parent.relative_to(SRC)
+        outs = [DST / rel / sub / (f.stem + ".jpg") for sub, _, _ in SIZES]
+        total_in += f.stat().st_size
+        # 已經壓過、原圖也沒換過的就跳過
+        if all(o.exists() and o.stat().st_mtime >= f.stat().st_mtime for o in outs):
+            total_out += outs[0].stat().st_size
+            continue
+        with Image.open(f) as im:
+            im = ImageOps.exif_transpose(im).convert("RGB")
+            for (sub, edge, quality), out in zip(SIZES, outs):
+                out.parent.mkdir(parents=True, exist_ok=True)
+                copy = im.copy()
+                copy.thumbnail((edge, edge), Image.LANCZOS)
+                copy.save(out, "JPEG", quality=quality, optimize=True, progressive=True)
+                if not sub:
+                    total_out += out.stat().st_size
+        print(f.relative_to(SRC).as_posix())
     # 原圖已刪除的，網頁版也一起清掉
-    keep = {(f.parent.name, f.stem) for f in SRC.glob("*/*") if f.suffix.lower() in EXTS}
-    for out in DST.glob("*/**/*.jpg"):
-        folder = out.parent.parent.name if out.parent.name in ("s", "m") else out.parent.name
-        if (folder, out.stem) not in keep:
+    keep = {(f.parent.relative_to(SRC).as_posix(), f.stem) for f in sources()}
+    for out in DST.rglob("*.jpg"):
+        parent = out.parent if full_size(out) else out.parent.parent
+        if (parent.relative_to(DST).as_posix(), out.stem) not in keep:
             out.unlink()
-            print(f"已移除 {out.relative_to(DST)}")
+            print(f"已移除 {out.relative_to(DST).as_posix()}")
     # 照片尺寸表：網頁依原始比例排版，照片才不會被裁切
     sizes = {}
-    for out in sorted(DST.glob("*/*.jpg")):
+    for out in sorted(o for o in DST.rglob("*.jpg") if full_size(o)):
         with Image.open(out) as im:
             sizes[out.relative_to(ROOT).as_posix()] = list(im.size)
     lines = ",\n".join(f'  "{k}": [{w}, {h}]' for k, (w, h) in sizes.items())
