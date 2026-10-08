@@ -729,7 +729,7 @@
   let playMusic, pauseMusic, isPlaying;
 
   if (M.youtube) {
-    let player = null, ready = false, wantPlay = false;
+    let player = null, ready = false, wantPlay = true;
     window.onYouTubeIframeAPIReady = () => {
       player = new YT.Player('ytPlayer', {
         width: 200,
