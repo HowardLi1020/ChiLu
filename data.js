@@ -91,7 +91,7 @@ window.MEMORY = {
       diaryCaption: "2026.07.26 蘭陽博物館",             // 寫在那張照片下方白邊的小字
       photos: [
         { src: "images/2026.07.23-26/IMG_4997.jpg", note: "" },
-        { src: "images/2026.07.23-26/IMG_4985.jpg", note: "", caption: "妳餵烏龜的時候超可愛！" },
+        { src: "images/2026.07.23-26/IMG_4985.jpg", note: "", caption: "妳餵象龜的時候超可愛！" },
         { src: "images/2026.07.23-26/IMG_4996.jpg", note: "", caption: "那時候心想，這個人怎麼可以這麼漂亮" },
         { src: "images/2026.07.23-26/IMG_5003.jpg", note: "" },
         { src: "images/2026.07.23-26/IMG_5020.jpg", note: "", caption: "雖然這張妳很嚴肅，但我絕對記得妳吃到天使蝦的時候，有多快樂XDDD" },
