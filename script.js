@@ -48,6 +48,11 @@
     img.src = img.dataset.src;
     delete img.dataset.src;
   });
+  // 反過來：把照片放掉、只留網址，釋放記憶體（寬高屬性還在，版面不會跳動）
+  const dehydrate = root => root.querySelectorAll('img[src]').forEach(img => {
+    img.dataset.src = img.getAttribute('src');
+    img.removeAttribute('src');
+  });
 
   /* ── 剪貼素材 ── */
   const tape = (n, r) => {
@@ -110,7 +115,7 @@
 
   // 印刷的抬頭
   const pcHead = el('div', 'pc-head');
-  pcHead.append(el('span', 'pc-title', 'FOR YOU'), el('span', 'pc-title-zh', '寫給你的日記'));
+  pcHead.append(el('span', 'pc-title', 'FOR YOU'), el('span', 'pc-title-zh', '寫給妳的日記'));
 
   // 郵票：有填 coverPhoto 就用那張照片當郵票圖案，沒填就是向日葵
   const pcStamp = el('div', 'pc-stamp');
@@ -168,7 +173,7 @@
     pcBody = el('div', 'pc-body');
     pcBody.append(pcMsg, pic);
   }
-  pc.append(pcHead, pcStamp, pcMark, pcBody, el('div', 'pc-divider'), pcAddr, el('p', 'pc-foot', `HANDMADE DIARY · ${firstDate.slice(0, 4)}`));
+  pc.append(pcHead, pcStamp, pcMark, pcBody, el('div', 'pc-divider'), pcAddr, el('p', 'pc-foot', `DIARY · ${firstDate.slice(0, 4)}`));
   const coverHint = el('p', 'cover-hint', '往左滑翻開 ');
   coverHint.append(el('span', '', '←'));
   cover.front.prepend(pc, coverHint);
@@ -218,9 +223,9 @@
   // 照片依原比例完整縮放進區塊、貼向 anchor 指定的角落；區塊彼此重疊，營造手作黏貼感
   const LAYOUTS = {
     1: { slots: [[.07, .07, .86, .8]], anchor: [[.5, .5]], rot: [-2], free: [[12, 88], [76, 3]] },
-    2: { slots: [[.05, .03, .76, .5], [.19, .43, .76, .5]], anchor: [[0, 0], [1, 1]], rot: [-2.5, 3], free: [[82, 8], [6, 88]] },
+    2: { slots: [[.06, .03, .82, .5], [.12, .43, .82, .5]], anchor: [[0, 0], [1, 1]], rot: [-2.5, 3], free: [[82, 8], [6, 88]] },
     3: {
-      slots: [[.04, .03, .68, .42], [.34, .29, .62, .38], [.05, .56, .64, .37]],
+      slots: [[.04, .03, .76, .43], [.22, .29, .72, .38], [.04, .5, .76, .43]],
       anchor: [[0, 0], [1, .5], [0, 1]], rot: [-3, 4, -2], free: [[80, 6], [72, 88]]
     }
   };
@@ -234,25 +239,63 @@
   let cardNo = 0;
 
   // 拍立得白邊佔照片框寬度的比例（和 style.css 的 .snap .frame padding 一致）
-  // 有 caption 的照片下緣加寬：依字數估行數（一行約 14 字，\n 可自己分行），兩行約 .29、三行約 .375
+  // 有 caption 的照片下緣加寬：框越寬、行數越少（\n 可自己分行）
   const POLAROID = { side: .05, bottom: .16 };
-  const capLines = text => text.split('\n').reduce((n, s) => n + Math.max(1, Math.ceil(s.length / 14)), 0);
-  const capBottom = text => .12 + .085 * Math.max(2, capLines(text));
+  const CAP_FS = .046;   // 小字字級：頁寬的比例（照片寬窄不影響字的大小）
+  // 小字實際排起來多高：在畫面外用同樣的字型排一次來量（中文標點不能在行首，用字數估會不準）
+  const capMeasure = el('div', 'snap-cap-measure');
+  document.body.append(capMeasure);
+  const capCache = new Map();
+  const capTextH = (text, width, fs) => {
+    const key = `${text}|${Math.round(width)}|${fs.toFixed(1)}`;
+    if (!capCache.has(key)) {
+      capMeasure.style.width = width + 'px';
+      capMeasure.style.fontSize = fs + 'px';
+      capMeasure.textContent = text;
+      capCache.set(key, capMeasure.offsetHeight);
+    }
+    return capCache.get(key);
+  };
+  // 下緣白邊高度（px）：字的高度＋上下留白（和 style.css 的 .snap-cap 一致：左右各留 6%）
+  const capPx = (text, pw, fs) => capTextH(text, pw * .88, fs) + fs * .6 + pw * .08;
   const placed = [];
   function placeSnaps() {
     const W = book.clientWidth, H = book.clientHeight;
     if (!W || !H) return;
     // 框高 = 框寬 × hPerW（照片本身＋上下白邊）
     const inner = 1 - 2 * POLAROID.side;
+    const fs = W * CAP_FS;
     const layout = (item, scale) => {
-      let { region: [x, y, w, h], anchor: [ax, ay], ratio, mirror, bottom } = item;
+      let { region: [x, y, w, h], anchor: [ax, ay], ratio, mirror, caption } = item;
       if (mirror) { x = 1 - x - w; ax = 1 - ax; }
       const rw = w * W, rh = h * H;
-      const hPerW = inner / ratio + POLAROID.side + bottom;
-      const pw = Math.min(rw, rh / hPerW) * scale;
-      const ph = pw * hPerW;
-      const left = x * W + (rw - pw) * ax, top = y * H + (rh - ph) * ay;
-      return { l: left, t: top, r: left + pw, b: top + ph };
+      const body = inner / ratio + POLAROID.side;   // 照片＋上白邊，佔框寬的倍數
+      let pw, f = fs;
+      if (!caption) {
+        pw = Math.min(rw, rh / (body + POLAROID.bottom));
+      } else {
+        // 下緣白邊高度跟框寬有關（框越窄、字越多行）：從最寬開始往下試，找放得進區塊的最寬框；
+        // 字太多、怎樣都放不下（矮的手機、很長的說明），就把字縮小一點再試，照片不能窄過頁寬 42%
+        const minPw = Math.min(rw, W * .42);
+        const fitPw = fz => {
+          for (let p = rw; p >= minPw; p -= W * .01) if (p * body + capPx(caption, p, fz) <= rh) return p;
+          return 0;
+        };
+        pw = 0;
+        for (const k of [1, .9, .8, .72]) {
+          f = fs * k;
+          if ((pw = fitPw(f))) break;
+        }
+        if (!pw) pw = minPw;   // 還是放不下：維持最小寬度，超出區塊的部分疊到別張照片上
+      }
+      pw *= scale;
+      const bottom = caption ? capPx(caption, pw, f) / pw : POLAROID.bottom;
+      const ph = pw * (body + bottom);
+      let left = x * W + (rw - pw) * ax, top = y * H + (rh - ph) * ay;
+      // 不管什麼尺寸的手機，照片都要整張留在頁面裡
+      left = Math.min(Math.max(left, W * .03), W * .97 - pw);
+      top = Math.min(Math.max(top, H * .015), H * .97 - ph);
+      return { l: left, t: top, r: left + pw, b: top + ph, bottom, fs: f };
     };
     const hit = (a, b, m = 6) => a.l < b.r + m && b.l < a.r + m && a.t < b.b + m && b.t < a.b + m;
     // 同一頁一起排：有 whole（不要被蓋住）的照片，整頁照片一起縮小到彼此不重疊為止
@@ -268,6 +311,8 @@
       items.forEach(({ f }, j) => {
         const r = rects[j];
         Object.assign(f.style, { left: r.l / W * 100 + '%', top: r.t / H * 100 + '%', width: (r.r - r.l) / W * 100 + '%' });
+        f.style.setProperty('--cap', r.bottom);
+        f.style.setProperty('--capfs', r.fs + 'px');
         f.rect = r;
       });
     });
@@ -322,6 +367,11 @@
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => { placeSnaps(); pages.forEach(p => p.check?.()); }, 120);
   });
+  // 手寫字型載入完成後重排一次（載入前量到的是備用字型的寬度）
+  document.fonts?.ready.then(() => {
+    capCache.clear();
+    placeSnaps();
+  });
 
   // 一張貼上去的照片；有寫 note 的可以翻到背面看，沒寫的點一下放大
   function snap(photo, idx, n) {
@@ -335,7 +385,6 @@
     // 寫在拍立得下緣的手寫小字
     if (photo.caption) {
       frame.append(el('figcaption', 'snap-cap', photo.caption));
-      f.style.setProperty('--cap', capBottom(photo.caption));
     }
     inner.append(frame);
     if (hasNote) {
@@ -376,7 +425,7 @@
         f.style.setProperty('--tilt', (mirror ? -rot[j] : rot[j]) + 'deg');
         // 有小字的照片疊在上面；同一頁好幾張都有字時，前面的壓在後面的上面（下緣的字才不會被蓋住）
         if (photos[k].caption) f.style.zIndex = 10 - j;
-        placed.push({ f, page: c, region, anchor: anchor[j], ratio: ratioOf(photos[k].src), mirror, whole: Boolean(photos[k].whole), bottom: photos[k].caption ? capBottom(photos[k].caption) : POLAROID.bottom });
+        placed.push({ f, page: c, region, anchor: anchor[j], ratio: ratioOf(photos[k].src), mirror, whole: Boolean(photos[k].whole), caption: photos[k].caption || '' });
         c.sheet.append(f);
         k++;
       });
@@ -401,22 +450,25 @@
     });
   });
 
-  /* ── 關於你：三張貼著紙膠帶的索引卡 ── */
+  /* ── 關於妳：貼著紙膠帶的小卡，兩張一排，有寫背面的才能翻 ── */
   if (D.traits?.length) {
     const p = makePage('traits paper-butter');
     const grid = el('div', 'trait-grid');
+    const TILT = [-3, 2.5, 1.5, -2, -1.5, 3];
     D.traits.forEach((t, k) => {
-      const btn = el('button', 'trait');
-      btn.setAttribute('aria-label', t.word + '，點一下翻面');
+      const btn = el('button', 'trait' + (t.back ? ' can-flip' : ''));
+      btn.style.setProperty('--r', TILT[k % TILT.length] + 'deg');
+      btn.setAttribute('aria-label', t.back ? t.word + '，點一下翻面' : t.word);
       const inner = el('div', 'inner');
       const front = el('div', 't-face t-front');
       front.append(el('div', 't-icon', t.icon), el('div', 't-word', t.word));
       inner.append(front, el('div', 't-face t-back', t.back));
-      btn.append(tape([1, 3, 5][k % 3], [-5, 4, -3][k % 3]), inner);
-      btn.addEventListener('click', () => btn.classList.toggle('flipped'));
+      btn.append(tape(k % 5 + 1, [-5, 4, -3, 6][k % 4]), inner);
+      if (t.back) btn.addEventListener('click', () => btn.classList.toggle('flipped'));
       grid.append(btn);
     });
-    p.sheet.append(highlight('h2', 'section-title', '關於你'), el('p', 'section-sub', '點一下卡片翻面'), grid, pageNo());
+    const sub = D.traits.some(t => t.back) ? el('p', 'section-sub', '點一下卡片翻面') : el('p', 'section-sub');
+    p.sheet.append(highlight('h2', 'section-title', '關於妳'), sub, grid, pageNo());
   }
 
   /* ── 結語：翻到這頁時文字一行一行浮現 ── */
@@ -429,6 +481,11 @@
   finBody.after(finSign);
   let played = false;
   const finCheck = fin.onEnter;
+  // 新浮現的那一行超出畫面時，慢慢往下捲到看得到
+  const follow = node => {
+    const s = fin.sheet, bottom = node.offsetTop + node.offsetHeight + 40;
+    if (bottom > s.scrollTop + s.clientHeight) s.scrollTo({ top: bottom - s.clientHeight, behavior: 'smooth' });
+  };
   fin.onEnter = async () => {
     finCheck();
     if (played) return;
@@ -436,6 +493,24 @@
     const lines = (E.text || '').split('\n');
     const last = lines.map(Boolean).lastIndexOf(true);
     for (let i = 0; i < lines.length; i++) {
+      // [照片]：在這裡貼上一張拍立得，慢慢浮現
+      if (lines[i].trim() === '[照片]') {
+        if (!E.photo) continue;
+        const row = el('div', 'diary-photos fin-photo');
+        const pic = el('figure', 'diary-photo');
+        pic.style.setProperty('--ratio', ratioOf(E.photo));
+        pic.append(photoEl(E.photo, E.caption || '', 'm'), tape(2, -4));
+        if (E.caption) pic.append(el('figcaption', 'diary-photo-cap', E.caption));
+        pic.addEventListener('click', e => { e.stopPropagation(); openPhoto(E.photo); });
+        row.append(pic);
+        hydrate(row);
+        finBody.append(row);
+        finCheck();
+        follow(row);
+        await wait(1800);
+        follow(row);   // 照片載入後高度變了，再跟一次
+        continue;
+      }
       const isBig = E.bigLast && i === last;
       const p = el('p', 'line' + (isBig ? ' big' : '') + (lines[i] ? '' : ' gap'));
       if (isBig) p.append(el('span', '', lines[i])); else p.textContent = lines[i];
@@ -443,6 +518,7 @@
       void p.offsetWidth;
       p.classList.add('show');
       finCheck();
+      follow(p);
       if (lines[i]) await wait(isBig ? 1800 : 1300);
     }
     if (E.sign) {
@@ -450,6 +526,8 @@
       finSign.hidden = false;
       await wait(1000);
     }
+    follow(fin.sheet.querySelector('.pg-no') || finBody);   // 最後捲到底，「往下還有」提示就會消失
+    await wait(800);
     finCheck();
   };
 
@@ -474,12 +552,19 @@
   }
 
   // 疊放順序：翻過去的在左邊依序往上疊，還沒翻的由前往後疊；只顯示目前頁附近的頁面
+  // 手機記憶體有限（iPhone 用太多會把分頁重新載入、跳回封面）：
+  // 遠的頁面完全不畫（display: none），照片也先放掉，翻回附近再載入
   function layout() {
     pages.forEach((p, i) => {
       p.el.style.zIndex = i < cur ? i + 1 : n * 2 - i;
+      p.el.style.display = i >= cur - 2 && i <= cur + 2 ? '' : 'none';
       p.el.style.visibility = i >= cur - 1 && i <= cur + 1 ? 'visible' : 'hidden';
+      p.el.classList.toggle('flat', i === cur);   // 停在眼前的那一頁不用 3D，手機才捲得動
       if (i >= cur - 1 && i <= cur + 3) hydrate(p.el);
+      else if (i < cur - 3 || i > cur + 5) dehydrate(p.el);
     });
+    // 網址記下目前第幾頁：萬一被重新載入，也會回到同一頁
+    history.replaceState(null, '', cur ? `#p=${cur}` : location.pathname + location.search);
     pageNum.textContent = cur === 0 ? '封面' : `${cur} / ${n - 1}`;
     prevBtn.disabled = cur === 0;
     nextBtn.disabled = cur === n - 1;
@@ -496,6 +581,7 @@
     busy = true;
     pages[i].el.style.zIndex = n * 3;
     pages[i].el.style.visibility = 'visible';
+    pages[i].el.classList.remove('flat');
     setDeg(i, deg, reduce ? 1 : ms);
     return new Promise(res => setTimeout(() => {
       cur = nextCur;
@@ -512,7 +598,10 @@
     return Promise.resolve();
   }
 
-  pages.forEach((_, i) => setDeg(i, 0, 0));
+  // 網址有 #p=頁數 就從那一頁開始（被重新載入時接著看）
+  const startPage = +(location.hash.match(/^#p=(\d+)$/) || [])[1] || 0;
+  if (startPage > 0 && startPage < n) cur = startPage;
+  pages.forEach((_, i) => setDeg(i, i < cur ? -180 : 0, 0));
   placeSnaps();
   entered();
 
@@ -544,6 +633,7 @@
       drag.i = drag.dir > 0 ? cur : cur - 1;
       pages[drag.i].el.style.zIndex = n * 3;
       pages[drag.i].el.style.visibility = 'visible';
+      pages[drag.i].el.classList.remove('flat');
       try { book.setPointerCapture(drag.id); } catch (_) {}
     }
     const w = book.clientWidth;
