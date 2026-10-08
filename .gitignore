@@ -6,3 +6,7 @@ __pycache__/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# 不公開：含 GPS 的原圖、完整對話紀錄（只留在本機）
+photos/
+claude-session/conversation.md

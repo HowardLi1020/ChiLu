@@ -1,7 +1,10 @@
 # 交接說明：日記相簿網頁（ChiLu）
 
 > 換到另一台電腦時，開啟 Claude Code 後跟它說：
-> 「先讀 `claude-session/HANDOFF.md` 和 `claude-session/conversation.md`，接著繼續改這個專案。」
+> 「先讀 `claude-session/HANDOFF.md`，接著繼續改這個專案。」
+>
+> **repo 已改成公開、用 GitHub Pages 發布**（2026-10-08）。`photos/` 原圖與 `claude-session/conversation.md` 已從 git 歷史完全移除、列入 .gitignore，只留在原本那台電腦（備份在 `D:\專案原始程式碼區\ChiLu-備份-20261008`）。
+> 另一台電腦的舊 clone 還有舊歷史，**不要在那台 pull 或 push**，請刪掉重新 clone；要加新照片時把原圖手動複製到 `photos/`。
 
 最後更新：2026-10-08（第二台電腦：手機版優化、適應各尺寸螢幕、補完 9 月日記、關於妳小卡、結語）
 
@@ -65,7 +68,7 @@ images/               壓縮後的照片（網頁實際使用）
   sizes.js            每張照片的原始寬高（自動產生，排版不裁切要用）
 tools/compress_photos.py  把 photos/ 原圖壓縮成 images/（並移除 GPS、產生 sizes.js）
 tools/screenshot.py       無伺服器的手機寬度截圖工具（給 Claude 檢查畫面用）
-photos/               原圖（208 MB、含拍攝地點 GPS；repo 必須維持**私人**）
+photos/               原圖（含拍攝地點 GPS；**不進 git**，已列入 .gitignore，只留在本機）
 music/                想改用 mp3 時放 song.mp3（目前用 YouTube）
 claude-session/       這份交接文件與對話紀錄
 ```
@@ -130,7 +133,7 @@ python tools/transcript_to_md.py <匯出的 zip>
 ## 還沒做／可以接著做的事
 
 1. 視需要補：各趟標題、照片背面的話、小卡背面、結語落款與照片小字。
-2. 放上網路：repo 是私人的（含原圖與 GPS），GitHub Pages 免費版不支援私人 repo；建議用 Netlify，**上傳時不要包含 `photos/`、`tools/`、`claude-session/`**，只放網頁需要的 index.html、style.css、script.js、data.js、images/、music/。
+2. 已放上網路：repo 公開，GitHub Pages 從 main 分支根目錄發布（網址 `https://howardli1020.github.io/ChiLu/`）。push 到 main 後約 1～2 分鐘自動更新。**絕對不要把 photos/ 或含 GPS 的原圖 commit 進來**（images/ 裡的照片已移除 GPS）。
 3. 產生網址的 QR code（之前提過可以幫忙做，尚未做）。
 4. 上線後用手機實測：翻頁流暢度、YouTube 音樂能否播放（若影片禁止嵌入，改放 mp3）、長時間瀏覽是否還會被重新載入、結語播完是否自動捲到底。
 5. 兩支原況照片的 .MOV 沒有使用（7/23、8/18），想讓照片動起來可再加。
