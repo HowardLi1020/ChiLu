@@ -202,7 +202,7 @@ window.MEMORY = {
     { icon: "", word: "勇敢面對事物", back: "" },
     { icon: "", word: "溫暖並且細膩", back: "" },
     { icon: "", word: "偶爾有點健忘", back: "" },
-    { icon: "", word: "情緒低落卻還是照顧我的心情", back: "" }
+    { icon: "", word: "細膩但也大意", back: "" }
   ],
 
   // 結語：最後一頁，文字會一行一行慢慢浮現
