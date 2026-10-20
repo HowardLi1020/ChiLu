@@ -191,6 +191,23 @@ window.MEMORY = {
         { src: "images/2026.09.25-27/IMG_5602.jpg", note: "", caption: "這張好可愛w" },
         { src: "images/2026.09.25-27/IMG_5612.jpg", note: "", caption: "彷彿在說：哼！小狗！哈哈哈哈哈" }
       ]
+    },
+    {
+      date: "2026.10.10 – 10.12",
+      dot: "10/10–12",
+      title: "",        // 這趟的標題
+      diary: "雖然我是在硬凹，但是謝謝妳，陪我過了這次生日。看著妳和大家出門開心的樣子，真的很快樂、很有趣。每一個瞬間都不怎麼想放過，就這樣默默又拍了好多照片哈哈哈哈，真的好漂亮。",
+      photos: [
+        { src: "images/2026.10.10-12/IMG_5695.jpg", note: "" },
+        { src: "images/2026.10.10-12/IMG_5708.jpg", note: "" },
+        { src: "images/2026.10.10-12/IMG_5709.jpg", note: "" },
+        { src: "images/2026.10.10-12/IMG_5726.jpg", note: "" },
+        { src: "images/2026.10.10-12/IMG_5736.jpg", note: "" },
+        { src: "images/2026.10.10-12/IMG_5795.jpg", note: "" },
+        { src: "images/2026.10.10-12/IMG_5936.jpg", note: "" },
+        { src: "images/2026.10.10-12/IMG_5938.jpg", note: "" },
+        { src: "images/2026.10.10-12/IMG_5941.jpg", note: "" }
+      ]
     }
   ],
 
